@@ -41,6 +41,7 @@ for event in events:
     team1 = event.get("home_team", "Team A")
     team2 = event.get("away_team", "Team B")
     commence = event.get("commence_time", "")
+    event_id = event.get("id", f"{team1}_{team2}_{commence}")
 
     bookmakers = event.get("bookmakers", [])
     if not bookmakers:
@@ -51,7 +52,12 @@ for event in events:
     if team1 not in odds_map or team2 not in odds_map:
         continue
 
-    prob1 = st.number_input(f"{team1} vs {team2} — Prob {team1} wins:", 0.0, 1.0, 0.5, 0.01, key=f"{team1}_{team2}")
+    # ✅ FIXED: use event ID to avoid duplicate keys
+    prob1 = st.number_input(
+        f"{team1} vs {team2} — Prob {team1} wins:",
+        min_value=0.0, max_value=1.0, value=0.5, step=0.01,
+        key=f"{team1}_{team2}_{event_id}"
+    )
     prob2 = 1 - prob1
 
     ev1 = prob1 * ((odds_map[team1] - 1) * stake) - prob2 * stake
