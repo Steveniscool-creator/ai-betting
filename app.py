@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 
 st.set_page_config(page_title="SharpPicks AI", layout="wide")
-st.title("📊 SharpPicks AI – Live Picks + Charts (Auto-Updating)")
+st.title("📊 SharpPicks AI – Live Picks + Charts (Pacific Time)")
 
 # ⚙️ CONFIG
 stake = 10
