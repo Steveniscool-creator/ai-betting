@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 
 st.set_page_config(page_title="SharpPicks AI", layout="wide")
-st.title("📊 SharpPicks AI – Live Picks + Charts (Pacific Time)")
+st.title("📊 SharpPicks AI – Smart Bets + Live Odds (PT Time)")
 
 # ⚙️ CONFIG
 stake = 10
@@ -32,9 +32,9 @@ def implied_prob(decimal_odds):
     return 1 / decimal_odds if decimal_odds else 0
 
 def format_game_time(utc_str):
-    utc = datetime.strptime(utc_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
-    pst = utc.astimezone(pytz.timezone("US/Pacific"))
-    return pst.strftime("%a, %b %d – %I:%M %p PT")
+    utc_time = datetime.strptime(utc_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
+    pt_time = utc_time.astimezone(pytz.timezone("US/Pacific"))
+    return pt_time.strftime("%a, %b %d – %I:%M %p PT")
 
 sport_choice = st.selectbox("Select Sport", list(sport_map.keys()))
 sport_key = sport_map[sport_choice]
@@ -72,48 +72,46 @@ for event in events:
 
     if max(ev1, ev2) > 0:
         if ev1 >= ev2:
-            value_bets.append({
-                "Matchup": f"{team1} vs {team2}",
-                "✅ BET ON": team1,
-                "Odds": odds_map[team1],
-                "Win %": round(prob1 * 100, 1),
-                "EV": round(ev1, 2),
-                "Game Time": game_time,
-                "Sport": sport_choice
-            })
+            bet_team = team1
+            opponent = team2
+            odds = odds_map[team1]
+            win_pct = round(prob1 * 100, 1)
+            ev = round(ev1, 2)
         else:
-            value_bets.append({
-                "Matchup": f"{team1} vs {team2}",
-                "✅ BET ON": team2,
-                "Odds": odds_map[team2],
-                "Win %": round(prob2 * 100, 1),
-                "EV": round(ev2, 2),
-                "Game Time": game_time,
-                "Sport": sport_choice
-            })
+            bet_team = team2
+            opponent = team1
+            odds = odds_map[team2]
+            win_pct = round(prob2 * 100, 1)
+            ev = round(ev2, 2)
+
+        value_bets.append({
+            "Matchup": f"{team1} vs {team2}",
+            "✅ BET ON": bet_team,
+            "Odds": f"{team1} ({odds_map[team1]}) | {team2} ({odds_map[team2]})",
+            "Win %": win_pct,
+            "EV": ev,
+            "Game Time": game_time,
+            "Sport": sport_choice
+        })
 
 if value_bets:
     df = pd.DataFrame(value_bets)
-    st.subheader("🔥 Best +EV Picks")
+    st.subheader("🔥 Best +EV Picks (Updated)")
     st.dataframe(df)
-
-    st.subheader("📊 Summary")
-    st.metric("Total Bets", len(df))
-    st.metric("Total Expected Value", f"${df['EV'].sum():.2f}")
 
     st.subheader("📊 EV by Team")
     st.bar_chart(df.set_index("✅ BET ON")["EV"])
 
+    st.subheader("📈 EV Trend (if saved)")
     try:
         history = pd.read_csv("bet_history.csv")
         history["Saved"] = pd.to_datetime(history["Saved"])
         ev_trend = history.groupby("Saved")["EV"].sum().cumsum()
-        st.subheader("📈 EV Over Time")
         st.line_chart(ev_trend)
     except:
         st.info("No history yet for EV chart.")
 
-    if st.button("💾 Save Picks"):
+    if st.button("💾 Save These Picks"):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         df["Saved"] = now
         try:
@@ -124,7 +122,7 @@ if value_bets:
         df.to_csv("bet_history.csv", index=False)
         st.success("Saved to bet_history.csv ✅")
 else:
-    st.info("No +EV bets found right now.")
+    st.info("No +EV picks found right now.")
 
 st.subheader("📂 Bet History")
 try:
