@@ -8,7 +8,7 @@ st.title("📊 SharpPicks AI – Live Odds + Auto EV Picks")
 
 # ⚙️ CONFIG
 stake = 10
-api_key = "8b1fc75ab32cdd60238394cfc0c88b83"  # Replace with your real key if needed
+api_key = "8b1fc75ab32cdd60238394cfc0c88b83"  # Your Odds API key
 region = "us"
 market = "h2h"
 
@@ -30,6 +30,7 @@ def get_live_odds(sport_key):
 def implied_prob(decimal_odds):
     return 1 / decimal_odds if decimal_odds else 0
 
+# 🎯 Sport selection
 sport_choice = st.selectbox("Select Sport", list(sport_map.keys()))
 sport_key = sport_map[sport_choice]
 events = get_live_odds(sport_key)
@@ -40,7 +41,7 @@ if not events:
 
 value_bets = []
 
-st.subheader("📈 Auto +EV Picks (based on implied probabilities)")
+st.subheader("📈 Best +EV Picks")
 for event in events:
     team1 = event.get("home_team", "Team A")
     team2 = event.get("away_team", "Team B")
@@ -62,29 +63,32 @@ for event in events:
     ev1 = prob1 * ((odds_map[team1] - 1) * stake) - (1 - prob1) * stake
     ev2 = prob2 * ((odds_map[team2] - 1) * stake) - (1 - prob2) * stake
 
-    if ev1 > 0:
-        value_bets.append({
-            "Recommended": "✅" if ev1 > ev2 else "",
-            "Team": team1,
-            "Opponent": team2,
-            "Odds": odds_map[team1],
-            "Win %": round(prob1 * 100, 1),
-            "EV": round(ev1, 2),
-            "Sport": sport_choice,
-            "Date": commence
-        })
-    if ev2 > 0:
-        value_bets.append({
-            "Recommended": "✅" if ev2 > ev1 else "",
-            "Team": team2,
-            "Opponent": team1,
-            "Odds": odds_map[team2],
-            "Win %": round(prob2 * 100, 1),
-            "EV": round(ev2, 2),
-            "Sport": sport_choice,
-            "Date": commence
-        })
+    # ✅ Pick the better team only once
+    if ev1 > 0 or ev2 > 0:
+        if ev1 > ev2:
+            value_bets.append({
+                "Matchup": f"{team1} vs {team2}",
+                "✅ BET ON": team1,
+                "Opponent": team2,
+                "Odds": odds_map[team1],
+                "Win %": round(prob1 * 100, 1),
+                "EV": round(ev1, 2),
+                "Sport": sport_choice,
+                "Date": commence
+            })
+        else:
+            value_bets.append({
+                "Matchup": f"{team1} vs {team2}",
+                "✅ BET ON": team2,
+                "Opponent": team1,
+                "Odds": odds_map[team2],
+                "Win %": round(prob2 * 100, 1),
+                "EV": round(ev2, 2),
+                "Sport": sport_choice,
+                "Date": commence
+            })
 
+# 📊 Show the bets
 if value_bets:
     df = pd.DataFrame(value_bets)
     st.dataframe(df)
@@ -106,6 +110,7 @@ if value_bets:
 else:
     st.info("No +EV bets found. Try again later.")
 
+# 📂 Bet history
 st.subheader("📂 Bet History")
 try:
     history = pd.read_csv("bet_history.csv")
