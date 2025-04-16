@@ -3,12 +3,13 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="AI Betting Bot", layout="wide")
-st.title("🎯 AI Value Betting Dashboard")
+st.set_page_config(page_title="SharpPicks AI", layout="wide")
+st.title("📊 SharpPicks AI – Smart +EV Sports Betting Dashboard")
 
+# ---- Sport Options ----
 sports_map = {
     "MLB (Baseball)": "baseball/mlb",
-    "Tennis (ATP/WTA)": "tennis",
+    "Tennis (ATP/WTA)": "tennis/atp",
 }
 stake = 10
 
@@ -21,6 +22,7 @@ def get_bovada_data(sport_path):
     except:
         return None
 
+# ---- Choose Sport ----
 sport_choice = st.selectbox("Select Sport", list(sports_map.keys()))
 sport_path = sports_map[sport_choice]
 
@@ -28,10 +30,10 @@ data = get_bovada_data(sport_path)
 events = data[0]["events"] if data and isinstance(data, list) else []
 
 if not events:
-    st.warning("⚠️ No upcoming events found.")
+    st.warning(f"⚠️ No upcoming {sport_choice} events found. Try again later.")
     st.stop()
 
-st.subheader(f"🧠 Input Your Win Probabilities – {sport_choice}")
+st.subheader(f"🧠 Input Win Probabilities — {sport_choice}")
 value_bets = []
 
 for event in events:
@@ -42,9 +44,8 @@ for event in events:
     team1 = competitors[0].get("name", "Team 1")
     team2 = competitors[1].get("name", "Team 2")
 
-    market = next(
-        (m for g in event.get("displayGroups", []) for m in g.get("markets", [])
-         if m.get("description") == "Moneyline"), None)
+    # Grab Moneyline market
+    market = next((m for g in event.get("displayGroups", []) for m in g.get("markets", []) if m.get("description") == "Moneyline"), None)
     if not market:
         continue
 
@@ -69,10 +70,11 @@ for event in events:
     if ev2 > 0:
         value_bets.append({"Team": team2, "Opponent": team1, "Odds": odds_map[team2], "Prob": prob2, "EV": round(ev2, 2)})
 
+# ---- Display Bets ----
 if not value_bets:
-    st.info("No +EV bets found yet. Try adjusting your win probabilities.")
+    st.info("No +EV bets found. Adjust your probabilities or check back later.")
 else:
-    st.subheader("📈 +EV Bets")
+    st.subheader("📈 Value Bets")
     df = pd.DataFrame(value_bets)
     st.dataframe(df)
 
@@ -90,6 +92,7 @@ else:
     col5.metric("Expected Win", f"${expected_win:.2f}")
     col6.metric("Expected Loss", f"${expected_loss:.2f}")
 
+    # ---- Save to CSV ----
     if st.button("💾 Save Bets to History"):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         df['Date'] = now
@@ -102,6 +105,7 @@ else:
         df.to_csv("bet_history.csv", index=False)
         st.success("Saved to bet_history.csv ✅")
 
+# ---- Bet History ----
 st.subheader("📜 Bet History")
 try:
     history = pd.read_csv("bet_history.csv")
@@ -110,4 +114,4 @@ try:
     filtered = history[history["Date"].dt.date >= start_date]
     st.dataframe(filtered.tail(50))
 except:
-    st.info("No bet history saved yet.")
+    st.info("No saved bet history yet. Save a pick to start tracking.")
